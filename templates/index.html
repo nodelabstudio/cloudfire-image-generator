@@ -31,8 +31,11 @@
     .nb-input { border: 2.5px solid #000; color: #1a1a1a; background: #fff; }
     .nb-input:focus { outline: none; box-shadow: 3px 3px 0 #FF6B35; }
     .nb-input::placeholder { color: #AAA; }
+    .dark .nb-input { color: var(--fg); background: #2a2a2a; border-color: var(--border); }
+    .dark .nb-input::placeholder { color: var(--fg-placeholder); }
     .nb-select { border: 2.5px solid #000; color: #1a1a1a; background: #fff; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L1 3h10z' fill='%23000'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
     .nb-select:focus { outline: none; box-shadow: 3px 3px 0 #FF6B35; }
+    .dark .nb-select { color: var(--fg); background-color: #2a2a2a; border-color: var(--border); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L1 3h10z' fill='%23f0f0f0'/%3E%3C/svg%3E"); }
     .nb-badge { border: 2px solid #000; color: #1a1a1a; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
     @keyframes nb-bounce {
       0%, 100% { transform: translateY(0); }
@@ -373,7 +376,7 @@
     function getAllModels() {
       const all = [];
       MODELS.cloudflare.free.forEach(m => { if (!COMPARE_EXCLUDE.includes(m.key)) all.push({...m, tier: "free"}); });
-      MODELS.cloudflare.paid.forEach(m => all.push({...m, tier: "paid"}));
+      if (IS_ADMIN) MODELS.cloudflare.paid.forEach(m => all.push({...m, tier: "paid"}));
       if (IS_ADMIN) MODELS.gemini.forEach(m => all.push({...m, tier: "gemini"}));
       return all;
     }
@@ -397,6 +400,7 @@
           const opt = document.createElement("option");
           opt.value = m.key;
           opt.textContent = `${m.name} \u2014 ${m.desc}`;
+          if (!IS_ADMIN) { opt.disabled = true; opt.textContent += ' (Admin Only)'; }
           paidGroup.appendChild(opt);
         });
         modelEl.appendChild(paidGroup);

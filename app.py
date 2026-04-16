@@ -15,7 +15,7 @@ from starlette.requests import Request
 from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from sqlalchemy import func
+from sqlalchemy import func, cast, Date
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 import requests as http_requests
@@ -452,18 +452,18 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
 
     total = db.query(func.count(GeneratedImage.id)).filter(GeneratedImage.user_id == uid).scalar() or 0
 
-    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_date = datetime.now(timezone.utc).date()
 
     today_count = (
         db.query(func.count(GeneratedImage.id))
         .filter(GeneratedImage.user_id == uid)
-        .filter(func.substr(GeneratedImage.created_at, 1, 10) == today_str)
+        .filter(cast(GeneratedImage.created_at, Date) == today_date)
         .scalar() or 0
     )
 
     # Generations per day (last 14 days)
     cutoff = datetime.now(timezone.utc) - timedelta(days=14)
-    day_expr = func.substr(GeneratedImage.created_at, 1, 10)
+    day_expr = cast(GeneratedImage.created_at, Date)
     daily_stats = (
         db.query(
             day_expr.label("day"),
@@ -475,7 +475,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         .order_by(day_expr)
         .all()
     )
-    daily_data = [{"day": row.day, "count": row.count} for row in daily_stats]
+    daily_data = [{"day": str(row.day), "count": row.count} for row in daily_stats]
     max_daily = max((d["count"] for d in daily_data), default=1)
 
     # Model usage
@@ -564,6 +564,9 @@ def generate(
         if provider == "gemini" and not request.session.get("is_admin"):
             return JSONResponse({"error": "Gemini models are restricted to admins only."}, status_code=403)
 
+        if provider == "cloudflare" and CLOUDFLARE_MODELS.get(model_key, {}).get("tier") == "paid" and not request.session.get("is_admin"):
+            return JSONResponse({"error": "Paid models are restricted to admins only."}, status_code=403)
+
         if provider == "cloudflare":
             image_data = generate_cloudflare(prompt, model_key)
         elif provider == "gemini":
@@ -631,6 +634,9 @@ def generate_compare(
 
         provider = "gemini" if mk in GEMINI_MODELS else "cloudflare"
         if provider == "gemini" and not request.session.get("is_admin"):
+            results.append({"model_key": mk, "model_name": model_info["name"], "error": "Admins only"})
+            continue
+        if provider == "cloudflare" and CLOUDFLARE_MODELS.get(mk, {}).get("tier") == "paid" and not request.session.get("is_admin"):
             results.append({"model_key": mk, "model_name": model_info["name"], "error": "Admins only"})
             continue
 
