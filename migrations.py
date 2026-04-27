@@ -28,11 +28,48 @@ def apply_migrations(engine):
 
         # Make image_data nullable (images now stored in Cloudinary)
         if "image_data" in cols:
-            try:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE images ALTER COLUMN image_data DROP NOT NULL"))
-            except Exception:
-                pass  # Already nullable or SQLite (doesn't support ALTER COLUMN)
+            image_data_col = next((c for c in insp.get_columns("images") if c["name"] == "image_data"), None)
+            if image_data_col and not image_data_col.get("nullable", True):
+                if engine.dialect.name == "sqlite":
+                    # SQLite doesn't support ALTER COLUMN — rebuild the table.
+                    with engine.begin() as conn:
+                        conn.execute(text("PRAGMA foreign_keys=OFF"))
+                        conn.execute(text("""
+                            CREATE TABLE images_new (
+                                id VARCHAR NOT NULL PRIMARY KEY,
+                                prompt TEXT NOT NULL,
+                                provider VARCHAR(50) NOT NULL,
+                                model_key VARCHAR(100) NOT NULL,
+                                model_name VARCHAR(200) NOT NULL DEFAULT '',
+                                image_data BLOB,
+                                image_url VARCHAR(500),
+                                user_id VARCHAR,
+                                is_favorite BOOLEAN NOT NULL DEFAULT 0,
+                                share_token VARCHAR(32),
+                                is_public BOOLEAN NOT NULL DEFAULT 0,
+                                created_at DATETIME
+                            )
+                        """))
+                        conn.execute(text("""
+                            INSERT INTO images_new
+                                (id, prompt, provider, model_key, model_name,
+                                 image_data, image_url, user_id, is_favorite,
+                                 share_token, is_public, created_at)
+                            SELECT id, prompt, provider, model_key, model_name,
+                                   image_data, image_url, user_id, is_favorite,
+                                   share_token, is_public, created_at
+                            FROM images
+                        """))
+                        conn.execute(text("DROP TABLE images"))
+                        conn.execute(text("ALTER TABLE images_new RENAME TO images"))
+                        conn.execute(text("CREATE UNIQUE INDEX ix_images_share_token ON images (share_token) WHERE share_token IS NOT NULL"))
+                        conn.execute(text("PRAGMA foreign_keys=ON"))
+                else:
+                    try:
+                        with engine.begin() as conn:
+                            conn.execute(text("ALTER TABLE images ALTER COLUMN image_data DROP NOT NULL"))
+                    except Exception:
+                        pass
 
     # --- users table ---
     if "users" in insp.get_table_names():

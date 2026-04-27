@@ -406,7 +406,11 @@ def gallery(
     tag: str = Query(None),
     db: Session = Depends(get_db),
 ):
-    query = db.query(GeneratedImage).order_by(GeneratedImage.created_at.desc())
+    query = (
+        db.query(GeneratedImage)
+        .filter(GeneratedImage.image_url.isnot(None))
+        .order_by(GeneratedImage.created_at.desc())
+    )
 
     if favorite == "1":
         query = query.filter(GeneratedImage.is_favorite == True)
@@ -452,18 +456,18 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
 
     total = db.query(func.count(GeneratedImage.id)).filter(GeneratedImage.user_id == uid).scalar() or 0
 
-    today_date = datetime.now(timezone.utc).date()
+    today_date = datetime.now(timezone.utc).date().isoformat()
 
     today_count = (
         db.query(func.count(GeneratedImage.id))
         .filter(GeneratedImage.user_id == uid)
-        .filter(cast(GeneratedImage.created_at, Date) == today_date)
+        .filter(func.date(GeneratedImage.created_at) == today_date)
         .scalar() or 0
     )
 
     # Generations per day (last 14 days)
     cutoff = datetime.now(timezone.utc) - timedelta(days=14)
-    day_expr = cast(GeneratedImage.created_at, Date)
+    day_expr = func.date(GeneratedImage.created_at)
     daily_stats = (
         db.query(
             day_expr.label("day"),
