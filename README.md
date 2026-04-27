@@ -1,32 +1,43 @@
-# Cloudfire Image Generator
+# Cloudfire Image Generation
 
-A web UI and CLI for generating images with **Cloudflare Workers AI** and **Google Gemini**. Built with FastAPI, styled with Tailwind CSS, and deployable to Railway in one click.
+A web app and CLI for generating images with **Cloudflare Workers AI** and **Google Gemini**. Built with FastAPI, hand-rolled pastel design system, and deployable to Railway in one click.
 
-<p align="center"><img src="fire-logo.jpg" width="120" alt="Cloudfire logo" /></p>
+<p align="center"><img src="static/img/art-logo.png" width="140" alt="Art the woodpecker — Cloudfire mascot" /></p>
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-teal) ![License](https://img.shields.io/badge/license-MIT-green)
 
+## Screenshots
+
+| Studio | Gallery |
+|---|---|
+| ![Studio — generator UI](docs/screenshots/05-studio.png) | ![Gallery](docs/screenshots/06-gallery.png) |
+
+| Dashboard | Public share |
+|---|---|
+| ![Dashboard](docs/screenshots/07-dashboard.png) | ![Public share page](docs/screenshots/04-share.png) |
+
+| Sign in | Create account |
+|---|---|
+| ![Sign in](docs/screenshots/01-login.png) | ![Create account](docs/screenshots/02-register.png) |
+
 ## Features
 
-- Web UI with model selection, prompt input, image preview, and download
-- 11 Cloudflare models (6 free, 5 paid) + 2 Gemini models (admin-only)
-- Model comparison mode (test same prompt across 2-3 models side by side)
-- Prompt history with reusable recent prompts
-- Gallery with favorites, tags, and filtering
-- Shareable public links for individual images
-- Usage dashboard with daily stats and model usage breakdown
-- Toast notifications for all actions
-- Neobrutalist UI with dark/light mode toggle
-- CLI scripts for quick one-off generation
-- Black image / content filter detection
-- Cloudinary-backed image storage (CDN-hosted, persistent across deploys)
-- Self-service forgot password flow with email reset links
-- User authentication (bcrypt-hashed passwords, session cookies)
-- Admin roles (Gemini restricted, rate limit exempt)
-- CSRF protection on all mutations
-- Rate limiting (5 image generations per 5 minutes per user)
-- Security headers (CSP, HSTS, X-Frame-Options, etc.)
-- One-click Railway deployment
+- **Studio UI** with model selection, prompt history, image preview, and one-click download
+- **13 models**: 11 Cloudflare (6 free, 5 paid) + 2 Gemini (admin-only)
+- **Compare mode** — race the same prompt across 2–3 models side by side
+- **Gallery** with favorites, tags, filters, and lightbox modal
+- **Shareable public links** for individual images
+- **Usage dashboard** with per-day and per-model breakdowns
+- **Pastel agency design** — Fraunces display + Plus Jakarta Sans body, soft cream/coral/lavender palette, Art the woodpecker mascot
+- **CLI scripts** for one-off generation (Cloudflare and Gemini)
+- **Cloudinary-backed image storage** (CDN-hosted, persistent across deploys)
+- **Self-service password reset** via email reset links
+- **User authentication** (bcrypt-hashed passwords, signed session cookies)
+- **Admin roles** (Gemini-restricted, rate-limit exempt)
+- **CSRF protection** on all mutations
+- **Rate limiting** (5 generations / 5 minutes / user)
+- **Security headers** (CSP, HSTS, X-Frame-Options, etc.)
+- **One-click Railway deployment**
 
 ## Quick Start
 
@@ -45,6 +56,11 @@ CF_API_TOKEN=your-api-token
 
 # Gemini (optional)
 GEMINI_API_KEY=your-gemini-key
+
+# Cloudinary (image storage)
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
 ```
 
 Run the web UI:
@@ -140,6 +156,16 @@ python3 gemini_image_gen.py --diagnose
 1. Get an API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
 2. For image generation, you may need to [link a billing account](https://console.cloud.google.com/billing) (no minimum spend)
 
+## Design System
+
+The UI is a hand-rolled pastel agency aesthetic — no UI kit, no component library beyond Tailwind utilities.
+
+- **Type:** [Fraunces](https://fonts.google.com/specimen/Fraunces) (variable serif, with `opsz` and `SOFT` axes) for display + [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) for body
+- **Palette:** cream surfaces, coral primary, lavender accents, soft mint and peach for state colors. Tokens live in `static/css/app.css` as CSS variables
+- **Mascot:** Art the woodpecker, generated via Gemini 3.1 Flash. Five poses (`art-{wave,paint,peek,sleep,logo}.png` in `static/img/`). Regenerate them with `python scripts/gen_mascots.py`
+- **Components:** prefixed `cf-*` to avoid Tailwind clashes — `cf-btn`, `cf-card`, `cf-input`, `cf-mascot-frame`, `cf-tile`, `cf-stat`, etc.
+- **Screenshots:** `python scripts/take_screenshots.py` (requires `pip install playwright && playwright install chromium`) writes to `docs/screenshots/`
+
 ## Security
 
 - **Authentication:** Username/password with bcrypt-hashed passwords stored in PostgreSQL
@@ -159,11 +185,11 @@ python3 gemini_image_gen.py --diagnose
 ## Tech Stack
 
 - **Backend:** FastAPI + Uvicorn
-- **Frontend:** Tailwind CSS (CDN)
+- **Frontend:** Tailwind CSS (CDN) + custom `app.css` design system
+- **Type:** Fraunces (display) + Plus Jakarta Sans (body), via Google Fonts
 - **Auth:** passlib + bcrypt, Starlette sessions
 - **Email:** Resend (SMTP)
 - **Database:** PostgreSQL (Railway) / SQLite (local dev)
 - **Image Storage:** Cloudinary (CDN)
 - **Providers:** Cloudflare Workers AI, Google Gemini
 - **Deployment:** Railway
-

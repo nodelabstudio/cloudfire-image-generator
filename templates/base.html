@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  {% if csrf_token is defined %}<meta name="csrf-token" content="{{ csrf_token }}" />{% endif %}
+  <title>{% block title %}Cloudfire Image Generation{% endblock %}</title>
+  <link rel="icon" type="image/png" href="/static/img/art-logo.png" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/static/css/app.css" />
+
+  {% block head %}{% endblock %}
+</head>
+<body class="cf-body">
+
+  {% block decoration %}
+    <div class="cf-deco" aria-hidden="true">
+      <div class="cf-blob cf-blob-coral"    style="width:520px;height:520px;top:-180px;left:-160px;opacity:0.45;"></div>
+      <div class="cf-blob cf-blob-lavender" style="width:600px;height:600px;bottom:-220px;right:-200px;opacity:0.42;"></div>
+      <div class="cf-blob cf-blob-peach"    style="width:300px;height:300px;top:32%;right:-80px;opacity:0.55;"></div>
+    </div>
+  {% endblock %}
+
+  <div class="cf-shell">
+
+    {% block header %}
+      <header class="cf-header">
+        <div class="cf-container cf-header-inner">
+          <a href="{% block brand_href %}/{% endblock %}" class="cf-brand">
+            <span class="cf-brand-mark">
+              <img src="/static/img/art-logo.png" alt="" />
+            </span>
+            <span>
+              <span class="cf-brand-name">Cloudfire</span>
+              <span class="cf-brand-tag">Image Generation</span>
+            </span>
+          </a>
+          <nav class="cf-nav">
+            {% block nav %}{% endblock %}
+          </nav>
+        </div>
+      </header>
+    {% endblock %}
+
+    {% block main %}
+      <main class="flex-1 cf-container" style="padding-block: clamp(2rem, 5vw, 4rem);">
+        {% block content %}{% endblock %}
+      </main>
+    {% endblock %}
+
+    {% block footer %}
+      <footer class="cf-footer">
+        <div class="cf-container cf-footer-inner">
+          <div class="flex items-center gap-2">
+            <span class="cf-italic-flair" style="font-size: 0.95rem;">Cloudfire</span>
+            <span class="cf-faint">— made with woodpecker grit.</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <a href="mailto:cloudfire@beachlife.email">Support</a>
+            <span class="cf-faint" aria-hidden="true">·</span>
+            <a href="https://github.com/nodelabstudio/gemini-n-cloudflare-imagegen-ai" target="_blank" rel="noopener">GitHub</a>
+          </div>
+        </div>
+      </footer>
+    {% endblock %}
+
+  </div>
+
+  {% include "partials/toast.html" %}
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

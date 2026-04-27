@@ -1,428 +1,365 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="csrf-token" content="{{ csrf_token }}" />
-  <title>Gallery - Cloudfire</title>
-  <link rel="icon" type="image/jpeg" href="/static/fire-logo.jpg" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: { extend: { fontFamily: { heading: ['Space Grotesk', 'system-ui', 'sans-serif'], body: ['DM Sans', 'system-ui', 'sans-serif'] } } }
-    }
-  </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+{% extends "base.html" %}
+
+{% block title %}Gallery — Cloudfire Image Generation{% endblock %}
+
+{% block nav %}
+  <a href="/" class="cf-nav-link">Studio</a>
+  <a href="/dashboard" class="cf-nav-link">Stats</a>
+  <span class="cf-badge cf-badge-paper hidden md:inline-flex">{{ username }}</span>
+  <a href="/logout" class="cf-btn cf-btn-ghost cf-btn-sm">Sign out</a>
+{% endblock %}
+
+{% block content %}
+<div class="cf-rise" style="display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+  <div style="display:flex; flex-direction:column; gap:0.5rem;">
+    <span class="cf-eyebrow">Gallery</span>
+    <h1 class="cf-h2">
+      Your <span class="cf-italic-flair">collection</span>
+      <span class="cf-faint" style="font-family: 'Plus Jakarta Sans', sans-serif; font-style: normal; font-size: var(--fs-md); font-weight: 500; margin-left: 0.5rem;">{{ images | length }} image{{ 's' if images | length != 1 }}</span>
+    </h1>
+  </div>
+  <a href="/" class="cf-btn cf-btn-primary">
+    New image
+    <svg class="cf-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+  </a>
+</div>
+
+<!-- Filter chips -->
+{% if images or active_favorite or active_tag %}
+<div class="cf-rise cf-rise-1" style="display:flex; align-items:center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.75rem;">
+  <a href="/gallery" class="cf-badge {% if not active_favorite and not active_tag %}cf-badge-ink{% else %}cf-badge-paper{% endif %}" style="text-decoration:none;">All</a>
+  <a href="/gallery?favorite=1" class="cf-badge {% if active_favorite %}cf-badge-ink{% else %}cf-badge-paper{% endif %}" style="text-decoration:none;">
+    {% if active_favorite %}♥{% else %}♡{% endif %} Favorites
+  </a>
+  {% for t in all_tags %}
+  <a href="/gallery?tag={{ t }}" class="cf-badge {% if active_tag == t %}cf-badge-ink{% else %}cf-badge-paper{% endif %}" style="text-decoration:none;">{{ t }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Grid or empty state -->
+{% if not images %}
+<div class="cf-rise cf-rise-2" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 5rem 1rem; text-align:center; gap: 1.25rem;">
+  <img src="/static/img/art-sleep.png" alt="" class="cf-mascot cf-mascot-float" style="width: 200px; height:auto;" />
+  <h2 class="cf-h3" style="margin-top: 0.5rem;">
+    {% if active_favorite or active_tag %}Nothing matching here{% else %}A blank perch{% endif %}
+  </h2>
+  <p class="cf-lead" style="max-width: 36ch;">
+    {% if active_favorite or active_tag %}Try clearing the filter — there's plenty out there.{% else %}Generate your first image and Art will start filling this gallery.{% endif %}
+  </p>
+  {% if active_favorite or active_tag %}
+  <a href="/gallery" class="cf-btn cf-btn-cream">Clear filters</a>
+  {% else %}
+  <a href="/" class="cf-btn cf-btn-primary cf-btn-lg">
+    Make one now
+    <svg class="cf-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+  </a>
+  {% endif %}
+</div>
+{% else %}
+
+<div class="cf-rise cf-rise-2" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 0.875rem;">
   <style>
-    body { font-family: 'DM Sans', system-ui, sans-serif; }
-    :root { --bg: #FFFDF7; --bg-card: #fff; --bg-muted: #F5F5F0; --fg: #1a1a1a; --fg-muted: #555; --fg-dim: #888; --fg-faint: #AAA; --border: #000; --shadow: #000; }
-    .dark { --bg: #1a1a1a; --bg-card: #2a2a2a; --bg-muted: #333; --fg: #f0f0f0; --fg-muted: #ccc; --fg-dim: #999; --fg-faint: #777; --border: #f0f0f0; --shadow: #000; }
-    .nb-card { border: 3px solid var(--border); box-shadow: 5px 5px 0 var(--shadow); }
-    .nb-card-hover:hover { box-shadow: 3px 3px 0 var(--shadow); transform: translate(2px, 2px); }
-    .nb-btn { border: 3px solid #000; box-shadow: 4px 4px 0 #000; transition: all 0.1s ease; }
-    .nb-btn:hover { box-shadow: 2px 2px 0 #000; transform: translate(2px, 2px); }
-    .nb-btn:active { box-shadow: 0 0 0 #000; transform: translate(4px, 4px); }
-    .nb-badge { border: 2px solid #000; color: #1a1a1a; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .nb-mini-btn { border: 2px solid #000; box-shadow: 2px 2px 0 #000; transition: all 0.1s ease; }
-    .nb-mini-btn:hover { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #000; }
-    #theme-toggle { cursor: pointer; transition: transform 0.3s ease; }
-    #theme-toggle:hover { transform: scale(1.15); }
+    @media (min-width: 720px) { .cf-gallery-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 1.25rem !important; } }
+    @media (min-width: 1080px) { .cf-gallery-grid { grid-template-columns: repeat(4, 1fr) !important; } }
+    .cf-tile {
+      background: var(--paper);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      border: 1px solid var(--line-soft);
+      box-shadow: var(--sh-sm);
+      transition: transform 0.3s var(--ease-spring), box-shadow 0.3s var(--ease-out);
+      position: relative;
+    }
+    .cf-tile:hover { transform: translateY(-4px); box-shadow: var(--sh-card); }
+    .cf-tile-img { display:block; width:100%; aspect-ratio: 1; object-fit: cover; cursor: pointer; }
+    .cf-tile-overlay {
+      position: absolute; inset: 0; padding: 0.875rem;
+      display: flex; align-items: flex-end;
+      background: linear-gradient(180deg, transparent 50%, rgba(31,27,22,0.55) 100%);
+      opacity: 0; transition: opacity 0.25s ease;
+      pointer-events: none;
+    }
+    .cf-tile:hover .cf-tile-overlay { opacity: 1; }
+    .cf-tile-overlay p { font-size: var(--fs-xs); color: white; line-height: 1.4; margin: 0;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .cf-tile-meta {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.625rem 0.875rem;
+      border-top: 1px solid var(--line-soft);
+      background: var(--paper);
+    }
+    .cf-mini-btn {
+      width: 28px; height: 28px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: var(--r-pill);
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink-soft);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, transform 0.15s;
+      text-decoration: none;
+    }
+    .cf-mini-btn:hover { transform: translateY(-1px); }
+    .cf-mini-btn-fav-on { background: var(--rose); color: var(--ink); border-color: transparent; }
+    .cf-mini-btn-dl    { background: var(--mint-soft); color: var(--mint-deep); border-color: transparent; }
+    .cf-mini-btn-dl:hover { background: var(--mint); }
+    .cf-mini-btn-del   { background: var(--rose-soft); color: #A33051; border-color: transparent; }
+    .cf-mini-btn-del:hover { background: #F4C1CE; }
+    .cf-fav-mark {
+      position: absolute; top: 0.625rem; right: 0.625rem;
+      width: 28px; height: 28px;
+      background: var(--paper);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      color: var(--coral);
+      font-size: 14px;
+      box-shadow: 0 4px 10px rgba(31,27,22,0.10);
+    }
   </style>
-  <script>
-    (function() {
-      const t = localStorage.getItem('theme');
-      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      }
-    })();
-  </script>
-</head>
-<body class="h-full bg-[var(--bg)] text-[var(--fg)]">
+</div>
 
-  <div class="min-h-full flex flex-col">
-
-    <!-- Header -->
-    <header class="px-4 sm:px-6 py-3 sm:py-4 bg-[var(--bg-card)]" style="border-bottom: 3px solid var(--border);">
-      <div class="max-w-6xl mx-auto">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2 sm:gap-3">
-            <img src="/static/fire-logo.jpg" alt="Cloudfire" class="w-8 h-8 sm:w-10 sm:h-10 rounded-md" style="border: 2px solid var(--border);" />
-            <div>
-              <h1 class="font-heading text-xl sm:text-2xl font-bold tracking-tight">
-                <span class="text-[#FF6B35]">Cloud</span><span class="text-[#FFD166]">fire</span> <span class="hidden sm:inline">Gallery</span>
-              </h1>
-              <p class="text-[10px] sm:text-xs text-[var(--fg-dim)] font-medium -mt-0.5"><span class="sm:hidden">Gallery &middot; </span>{{ images | length }} image{{ 's' if images | length != 1 }}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 sm:gap-3">
-            <svg id="theme-toggle" onclick="toggleTheme()" class="w-5 h-5 text-[var(--fg-dim)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <g id="icon-sun" class="hidden"><circle cx="12" cy="12" r="5" stroke-width="2"/><path stroke-width="2" stroke-linecap="round" d="M12 1v2m0 18v2m11-11h-2M3 12H1m16.36-7.36l-1.41 1.41M7.05 16.95l-1.41 1.41m12.72 0l-1.41-1.41M7.05 7.05L5.64 5.64"/></g>
-              <g id="icon-moon"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></g>
-            </svg>
-            <a href="/" class="nb-badge px-2 sm:px-3 py-1 rounded-md bg-[#FF6B35] text-white text-[8px] sm:text-[10px]">Generator</a>
-            <a href="/dashboard" class="nb-badge px-2 sm:px-3 py-1 rounded-md bg-[#7DF9FF] text-[8px] sm:text-[10px]">Stats</a>
-            <span class="nb-badge px-2 sm:px-3 py-1 rounded-md bg-[#FFD166] text-[8px] sm:text-[10px] hidden sm:inline-block">{{ username }}</span>
-            <a href="/logout" class="nb-badge px-2 sm:px-3 py-1 rounded-md bg-[#FFE0E0] hover:bg-[#FFCCCC] transition-colors text-[8px] sm:text-[10px]">Logout</a>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Filter bar -->
-    {% if images or active_favorite or active_tag %}
-    <div class="px-4 sm:px-6 py-2 bg-[var(--bg-card)]" style="border-bottom: 2px solid var(--border);">
-      <div class="max-w-6xl mx-auto flex items-center gap-2 flex-wrap">
-        <a href="/gallery" class="nb-badge px-2 py-0.5 rounded-sm text-[8px] {% if not active_favorite and not active_tag %}bg-[#FF6B35] text-white{% else %}bg-[#e8e8e0]{% endif %}">All</a>
-        <a href="/gallery?favorite=1" class="nb-badge px-2 py-0.5 rounded-sm text-[8px] {% if active_favorite %}bg-[#FF69B4] text-white{% else %}bg-[#e8e8e0]{% endif %}">Favorites</a>
-        {% for t in all_tags %}
-        <a href="/gallery?tag={{ t }}" class="nb-badge px-2 py-0.5 rounded-sm text-[8px] {% if active_tag == t %}bg-[#BFFF00]{% else %}bg-[#e8e8e0]{% endif %}">{{ t }}</a>
-        {% endfor %}
-      </div>
+<div class="cf-gallery-grid cf-rise cf-rise-2" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 0.875rem;">
+  {% for img in images %}
+  <div class="cf-tile" id="card-{{ img.id }}">
+    <div style="position:relative;">
+      <img class="cf-tile-img" src="{{ img.image_url }}" alt="Generated image" loading="lazy"
+        onclick="openModal('{{ img.id }}', `{{ img.prompt | e }}`, '{{ img.provider }}', '{{ img.model_name }}', '{{ img.created_at.strftime('%b %d, %Y at %I:%M %p') }}', {{ 'true' if img.is_favorite else 'false' }}, {{ 'true' if img.is_public else 'false' }}, '{{ img.share_token or '' }}', '{{ img.image_url }}')" />
+      <div class="cf-tile-overlay"><p>{{ img.prompt[:120] }}</p></div>
+      {% if img.is_favorite %}<span class="cf-fav-mark">♥</span>{% endif %}
     </div>
-    {% endif %}
-
-    <!-- Main -->
-    <main class="flex-1 px-4 sm:px-6 py-6 sm:py-8">
-      <div class="max-w-6xl mx-auto">
-
-        {% if not images %}
-        <div class="flex flex-col items-center justify-center py-24 text-center">
-          <div class="w-24 h-24 rounded-md bg-[var(--bg-muted)] flex items-center justify-center mb-5" style="border: 3px solid var(--border);">
-            <svg class="w-12 h-12 text-[var(--fg-placeholder,#CCC)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-            </svg>
-          </div>
-          <p class="text-[var(--fg-muted)] text-lg font-bold mb-2">{% if active_favorite or active_tag %}No matching images{% else %}No images yet{% endif %}</p>
-          <p class="text-[var(--fg-faint)] text-sm mb-6">{% if active_favorite or active_tag %}<a href="/gallery" class="text-[#FF6B35] font-bold">Clear filters</a>{% else %}Generate your first image to see it here{% endif %}</p>
-          {% if not active_favorite and not active_tag %}
-          <a href="/" class="nb-btn bg-[#FF6B35] text-white font-bold px-6 py-2.5 rounded-md">Generate Image</a>
-          {% endif %}
-        </div>
+    <div class="cf-tile-meta">
+      <div style="display:flex; align-items:center; gap:0.4rem; min-width:0;">
+        {% if img.provider == 'cloudflare' %}
+        <span class="cf-badge cf-badge-blush" style="padding: 0.15rem 0.5rem; font-size: 0.625rem;">CF</span>
         {% else %}
-
-        <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-          {% for img in images %}
-          <div class="nb-card nb-card-hover bg-[var(--bg-card)] rounded-md overflow-hidden transition-all duration-150 group" id="card-{{ img.id }}">
-            <div class="relative cursor-pointer" onclick="openModal('{{ img.id }}', `{{ img.prompt | e }}`, '{{ img.provider }}', '{{ img.model_name }}', '{{ img.created_at.strftime('%b %d, %Y at %I:%M %p') }}', {{ 'true' if img.is_favorite else 'false' }}, {{ 'true' if img.is_public else 'false' }}, '{{ img.share_token or '' }}', '{{ img.image_url }}')">
-              <img src="{{ img.image_url }}" alt="Generated image" loading="lazy" class="w-full aspect-square object-cover" />
-              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-200 flex items-end">
-                <div class="p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <p class="text-xs text-white font-medium line-clamp-2 drop-shadow-lg">{{ img.prompt[:120] }}</p>
-                </div>
-              </div>
-              {% if img.is_favorite %}
-              <div class="absolute top-2 right-2 text-lg">&#10084;</div>
-              {% endif %}
-            </div>
-            <div class="px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between" style="border-top: 2.5px solid var(--border);">
-              <div class="flex items-center gap-2 min-w-0">
-                {% if img.provider == 'cloudflare' %}
-                <span class="nb-badge px-1.5 py-0 rounded-sm bg-[#FF6B35] text-white" style="font-size: 8px;">CF</span>
-                {% else %}
-                <span class="nb-badge px-1.5 py-0 rounded-sm bg-[#4285F4] text-white" style="font-size: 8px;">G</span>
-                {% endif %}
-                <span class="text-xs text-[var(--fg-dim)] truncate font-medium">{{ img.model_name }}</span>
-              </div>
-              <div class="flex items-center gap-1.5 shrink-0">
-                <button onclick="event.stopPropagation(); toggleFav('{{ img.id }}', this)" title="Favorite"
-                  class="nb-mini-btn w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-sm text-xs {% if img.is_favorite %}bg-[#FF69B4]{% else %}bg-[var(--bg-muted)]{% endif %}">
-                  &#9829;
-                </button>
-                <a href="/download/{{ img.id }}" title="Download" onclick="event.stopPropagation()"
-                  class="nb-mini-btn w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-sm bg-[#BFFF00]">
-                  <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="#1a1a1a" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3" />
-                  </svg>
-                </a>
-                <button onclick="event.stopPropagation(); deleteImage('{{ img.id }}', this)" title="Delete"
-                  class="nb-mini-btn w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-sm bg-[#FFE0E0] hover:bg-[#FFCCCC]">
-                  <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#CC0000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
+        <span class="cf-badge cf-badge-lilac" style="padding: 0.15rem 0.5rem; font-size: 0.625rem;">G</span>
         {% endif %}
-
+        <span class="cf-faint" style="font-size: var(--fs-xs); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ img.model_name }}</span>
       </div>
-    </main>
-
-    <footer class="px-4 sm:px-6 py-3 sm:py-4 bg-[var(--bg-card)]" style="border-top: 3px solid var(--border);">
-      <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-0 text-[10px] sm:text-xs text-[var(--fg-faint)] font-medium">
-        <span>Cloudfire Image Generator</span>
-        <div class="flex items-center gap-3">
-          <a href="mailto:cloudfire@beachlife.email" class="hover:text-[#FF6B35] transition-colors">Questions or suggestions? Contact Cloudfire Support</a>
-          <span class="text-[var(--fg-faint)]">&middot;</span>
-          <a href="https://github.com/nodelabstudio/gemini-n-cloudflare-imagegen-ai" target="_blank" class="hover:text-[#FF6B35] transition-colors">GitHub</a>
-        </div>
-      </div>
-    </footer>
-
-  </div>
-
-  <!-- Lightbox Modal -->
-  <div id="modal" class="fixed inset-0 z-50 hidden" onclick="closeModal(event)">
-    <div class="absolute inset-0 bg-black/40"></div>
-    <div class="relative h-full flex items-center justify-center p-3 sm:p-6">
-      <div class="nb-card bg-[var(--bg-card)] rounded-md overflow-hidden max-w-4xl w-full max-h-[90vh] flex flex-col" onclick="event.stopPropagation()">
-        <!-- Modal header -->
-        <div class="flex items-center justify-between px-4 sm:px-5 py-2 sm:py-3 shrink-0" style="border-bottom: 2.5px solid var(--border); background: var(--bg-muted);">
-          <div class="flex items-center gap-3">
-            <span id="modal-provider" class="nb-badge px-1.5 py-0 rounded-sm text-white" style="font-size: 8px;"></span>
-            <span id="modal-model" class="text-sm text-[var(--fg-muted)] font-bold"></span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span id="modal-date" class="text-xs text-[var(--fg-faint)] hidden sm:inline"></span>
-            <button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-md bg-[var(--bg-card)] font-bold text-sm" style="border: 2px solid var(--border); box-shadow: 2px 2px 0 var(--shadow);">
-              X
-            </button>
-          </div>
-        </div>
-        <!-- Modal image -->
-        <div class="flex-1 overflow-auto bg-[var(--bg-muted)] flex items-center justify-center p-2">
-          <img id="modal-image" src="" alt="Full size image" class="max-w-full max-h-[55vh] object-contain rounded-md" style="border: 2px solid var(--border);" />
-        </div>
-        <!-- Modal footer -->
-        <div class="px-4 sm:px-5 py-3 space-y-3 shrink-0" style="border-top: 2.5px solid var(--border);">
-          <p id="modal-prompt" class="text-sm text-[var(--fg-muted)] leading-relaxed"></p>
-
-          <!-- Tags -->
-          <div id="modal-tags" class="flex flex-wrap gap-1.5 items-center">
-            <span class="text-[10px] font-bold text-[var(--fg-dim)] uppercase">Tags:</span>
-          </div>
-          <div class="flex gap-2">
-            <input id="tag-input" type="text" placeholder="Add tag..." class="nb-input flex-1 rounded-sm px-2 py-1 text-xs" maxlength="100" onkeydown="if(event.key==='Enter'){addTag(); event.preventDefault();}" />
-            <button onclick="addTag()" class="nb-badge px-2 py-0.5 rounded-sm bg-[#BFFF00] cursor-pointer text-[8px]" style="box-shadow: 1px 1px 0 #000;">Add</button>
-          </div>
-
-          <!-- Action buttons -->
-          <div class="flex gap-2 flex-wrap">
-            <a id="modal-download" href="#" download
-              class="nb-btn flex-1 flex items-center justify-center gap-2 bg-[#FF6B35] text-white font-bold py-2 rounded-md text-xs sm:text-sm">
-              Download
-            </a>
-            <button onclick="copyPrompt()"
-              class="nb-btn flex items-center justify-center gap-1 bg-[#7DF9FF] text-[#1a1a1a] font-bold py-2 px-3 rounded-md text-xs sm:text-sm">
-              <span id="copy-btn-text">Copy Prompt</span>
-            </button>
-            <button id="share-btn" onclick="shareImage()"
-              class="nb-btn flex items-center justify-center gap-1 bg-[#FFD166] text-[#1a1a1a] font-bold py-2 px-3 rounded-md text-xs sm:text-sm">
-              Share
-            </button>
-          </div>
-
-          <!-- Share link (hidden until shared) -->
-          <div id="share-link-row" class="hidden flex gap-2 items-center">
-            <input id="share-link-input" type="text" readonly class="nb-input flex-1 rounded-sm px-2 py-1 text-xs" />
-            <button onclick="copyShareLink()" class="nb-badge px-2 py-0.5 rounded-sm bg-[#BFFF00] cursor-pointer text-[8px]" style="box-shadow: 1px 1px 0 #000;">Copy</button>
-            <button onclick="unshareImage()" class="nb-badge px-2 py-0.5 rounded-sm bg-[#FFE0E0] cursor-pointer text-[8px]" style="box-shadow: 1px 1px 0 #000;">Unshare</button>
-          </div>
-        </div>
+      <div style="display:flex; align-items:center; gap: 0.375rem; flex-shrink:0;">
+        <button title="Favorite" onclick="event.stopPropagation(); toggleFav('{{ img.id }}', this)"
+          class="cf-mini-btn {% if img.is_favorite %}cf-mini-btn-fav-on{% endif %}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="{% if img.is_favorite %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
+        <a title="Download" href="/download/{{ img.id }}" onclick="event.stopPropagation()" class="cf-mini-btn cf-mini-btn-dl">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        </a>
+        <button title="Delete" onclick="event.stopPropagation(); deleteImage('{{ img.id }}', this)" class="cf-mini-btn cf-mini-btn-del">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+        </button>
       </div>
     </div>
   </div>
+  {% endfor %}
+</div>
+{% endif %}
 
-  {% include "partials/toast.html" %}
+<!-- Lightbox Modal -->
+<div id="modal" class="fixed inset-0 z-50 hidden" onclick="closeModal(event)" style="background: rgba(31,27,22,0.55); backdrop-filter: blur(8px);">
+  <div style="position:relative; height:100%; display:flex; align-items:center; justify-content:center; padding: clamp(0.75rem, 3vw, 1.75rem);">
+    <div onclick="event.stopPropagation()" class="cf-card" style="padding:0; overflow:hidden; max-width: 64rem; width: 100%; max-height: 92vh; display:flex; flex-direction:column; background: var(--paper);">
 
-  <script>
-    function toggleTheme() {
-      const isDark = document.documentElement.classList.toggle('dark');
-      localStorage.setItem('theme', isDark ? 'dark' : 'light');
-      updateThemeIcon();
-    }
-    function updateThemeIcon() {
-      const isDark = document.documentElement.classList.contains('dark');
-      document.getElementById('icon-sun').classList.toggle('hidden', !isDark);
-      document.getElementById('icon-moon').classList.toggle('hidden', isDark);
-    }
-    updateThemeIcon();
+      <!-- Modal header -->
+      <div style="display:flex; align-items:center; justify-content:space-between; padding: 0.875rem 1.25rem; border-bottom: 1px solid var(--line-soft); background: linear-gradient(110deg, var(--blush-soft), var(--lilac-soft));">
+        <div style="display:flex; align-items:center; gap: 0.625rem;">
+          <span id="modal-provider" class="cf-badge cf-badge-blush"></span>
+          <span id="modal-model" class="cf-h4" style="font-size: 0.95rem; font-weight: 600;"></span>
+        </div>
+        <div style="display:flex; align-items:center; gap: 0.875rem;">
+          <span id="modal-date" class="cf-faint" style="font-size: var(--fs-xs);"></span>
+          <button onclick="closeModal()" class="cf-btn cf-btn-ghost cf-btn-sm" style="padding: 0.4rem 0.7rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
 
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-    let currentImageId = null;
+      <!-- Modal image -->
+      <div style="flex:1; overflow:auto; background: var(--cream-deep); display:flex; align-items:center; justify-content:center; padding: 1rem;">
+        <img id="modal-image" src="" alt="Full size" style="max-width:100%; max-height: 56vh; object-fit:contain; border-radius: var(--r-md); box-shadow: var(--sh-md);" />
+      </div>
 
-    function openModal(id, prompt, provider, model, date, isFav, isPublic, shareToken, imageUrl) {
-      currentImageId = id;
-      document.getElementById("modal-image").src = imageUrl;
-      document.getElementById("modal-prompt").textContent = prompt;
-      document.getElementById("modal-model").textContent = model;
-      document.getElementById("modal-date").textContent = date;
-      document.getElementById("modal-download").href = `/download/${id}`;
+      <!-- Modal footer -->
+      <div style="padding: 1rem 1.25rem; border-top: 1px solid var(--line-soft); display:flex; flex-direction:column; gap: 0.875rem;">
+        <p id="modal-prompt" class="cf-muted" style="font-size: var(--fs-sm); line-height: 1.55; margin:0;"></p>
 
-      const dot = document.getElementById("modal-provider");
-      dot.className = `nb-badge px-1.5 py-0 rounded-sm ${provider === 'cloudflare' ? 'bg-[#FF6B35]' : 'bg-[#4285F4]'} text-white`;
-      dot.style.fontSize = "8px";
-      dot.textContent = provider === 'cloudflare' ? 'CF' : 'G';
+        <!-- Tags -->
+        <div id="modal-tags" style="display:flex; align-items:center; flex-wrap:wrap; gap: 0.4rem;">
+          <span class="cf-eyebrow" style="font-size: 0.6875rem;">Tags</span>
+        </div>
+        <div style="display:flex; gap: 0.5rem;">
+          <input id="tag-input" type="text" placeholder="Add a tag…" class="cf-input" maxlength="100" style="padding: 0.5rem 0.75rem; font-size: var(--fs-sm);" onkeydown="if(event.key==='Enter'){addTag(); event.preventDefault();}" />
+          <button onclick="addTag()" class="cf-btn cf-btn-cream cf-btn-sm">Add</button>
+        </div>
 
-      // Share state
-      const shareRow = document.getElementById("share-link-row");
-      if (isPublic && shareToken) {
-        shareRow.classList.remove("hidden");
-        shareRow.classList.add("flex");
-        document.getElementById("share-link-input").value = `${location.origin}/s/${shareToken}`;
-        document.getElementById("share-btn").textContent = "Shared";
-      } else {
-        shareRow.classList.add("hidden");
-        shareRow.classList.remove("flex");
-        document.getElementById("share-btn").textContent = "Share";
-      }
+        <!-- Action buttons -->
+        <div style="display:flex; gap: 0.5rem; flex-wrap: wrap;">
+          <a id="modal-download" href="#" download class="cf-btn cf-btn-coral" style="flex:1 1 8rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Download
+          </a>
+          <button onclick="copyPrompt()" class="cf-btn cf-btn-cream"><span id="copy-btn-text">Copy prompt</span></button>
+          <button id="share-btn" onclick="shareImage()" class="cf-btn cf-btn-cream">Share</button>
+        </div>
 
-      // Load tags
-      loadTags(id);
+        <!-- Share link row -->
+        <div id="share-link-row" class="hidden" style="display:none; gap:0.5rem; align-items:center;">
+          <input id="share-link-input" type="text" readonly class="cf-input" style="padding:0.5rem 0.75rem; font-size: var(--fs-sm);" />
+          <button onclick="copyShareLink()" class="cf-btn cf-btn-cream cf-btn-sm">Copy</button>
+          <button onclick="unshareImage()" class="cf-btn cf-btn-ghost cf-btn-sm">Unshare</button>
+        </div>
+      </div>
 
-      document.getElementById("modal").classList.remove("hidden");
-      document.body.style.overflow = "hidden";
-    }
+    </div>
+  </div>
+</div>
+{% endblock %}
 
-    function closeModal(e) {
-      if (e && e.target !== e.currentTarget) return;
-      document.getElementById("modal").classList.add("hidden");
-      document.body.style.overflow = "";
-      currentImageId = null;
-    }
+{% block scripts %}
+<script>
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+  let currentImageId = null;
 
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+  function openModal(id, prompt, provider, model, date, isFav, isPublic, shareToken, imageUrl) {
+    currentImageId = id;
+    document.getElementById("modal-image").src = imageUrl;
+    document.getElementById("modal-prompt").textContent = prompt;
+    document.getElementById("modal-model").textContent = model;
+    document.getElementById("modal-date").textContent = date;
+    document.getElementById("modal-download").href = `/download/${id}`;
 
-    // Copy prompt
-    function copyPrompt() {
-      const text = document.getElementById("modal-prompt").textContent;
-      navigator.clipboard.writeText(text);
-      const btn = document.getElementById("copy-btn-text");
-      btn.textContent = "Copied!";
-      showToast("Prompt copied to clipboard!", "success");
-      setTimeout(() => btn.textContent = "Copy Prompt", 2000);
-    }
+    const dot = document.getElementById("modal-provider");
+    dot.className = `cf-badge ${provider === 'cloudflare' ? 'cf-badge-blush' : 'cf-badge-lilac'}`;
+    dot.textContent = provider === 'cloudflare' ? 'CF' : 'G';
 
-    // Favorites
-    async function toggleFav(id, btn) {
-      event.stopPropagation();
-      const res = await fetch(`/api/image/${id}/favorite`, {
-        method: "POST",
-        headers: { "X-CSRF-Token": csrfToken },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        btn.classList.toggle("bg-[#FF69B4]", data.is_favorite);
-        btn.classList.toggle("bg-[var(--bg-muted)]", !data.is_favorite);
-        showToast(data.is_favorite ? "Added to favorites" : "Removed from favorites", "info");
-      }
-    }
-
-    // Tags
-    async function loadTags(imageId) {
-      const container = document.getElementById("modal-tags");
-      container.innerHTML = '<span class="text-[10px] font-bold text-[var(--fg-dim)] uppercase">Tags:</span>';
-      try {
-        const res = await fetch(`/api/image/${imageId}/tags`);
-        if (!res.ok) return;
-        // Tags come from the page data
-      } catch(e) {}
-      // Use inline data
-      const imageTags = {{ image_tags | tojson }};
-      const tags = imageTags[imageId] || [];
-      tags.forEach(t => {
-        const pill = document.createElement("span");
-        pill.className = "nb-badge px-1.5 py-0 rounded-sm bg-[#BFFF00] text-[8px] cursor-pointer";
-        pill.style.boxShadow = "1px 1px 0 #000";
-        pill.innerHTML = `${t} <span onclick="removeTag('${imageId}', '${t}', this.parentNode)" class="ml-1">&times;</span>`;
-        container.appendChild(pill);
-      });
+    const shareRow = document.getElementById("share-link-row");
+    if (isPublic && shareToken) {
+      shareRow.classList.remove("hidden");
+      shareRow.style.display = "flex";
+      document.getElementById("share-link-input").value = `${location.origin}/s/${shareToken}`;
+      document.getElementById("share-btn").textContent = "Shared";
+    } else {
+      shareRow.classList.add("hidden");
+      shareRow.style.display = "none";
+      document.getElementById("share-btn").textContent = "Share";
     }
 
-    async function addTag() {
-      const input = document.getElementById("tag-input");
-      const tag = input.value.trim().toLowerCase();
-      if (!tag || !currentImageId) return;
-      const formData = new FormData();
-      formData.append("tag", tag);
-      const res = await fetch(`/api/image/${currentImageId}/tags`, {
-        method: "POST",
-        headers: { "X-CSRF-Token": csrfToken },
-        body: formData,
-      });
-      if (res.ok) {
-        input.value = "";
-        loadTags(currentImageId);
-        showToast(`Tag "${tag}" added`, "success");
-      } else {
-        const data = await res.json();
-        showToast(data.error || "Failed to add tag", "error");
-      }
-    }
+    loadTags(id);
 
-    async function removeTag(imageId, tag, pill) {
-      event.stopPropagation();
-      const res = await fetch(`/api/image/${imageId}/tags/${encodeURIComponent(tag)}`, {
-        method: "DELETE",
-        headers: { "X-CSRF-Token": csrfToken },
-      });
-      if (res.ok) {
-        pill.remove();
-        showToast(`Tag "${tag}" removed`, "info");
-      }
-    }
+    document.getElementById("modal").classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
 
-    // Share
-    async function shareImage() {
-      if (!currentImageId) return;
-      const res = await fetch(`/api/image/${currentImageId}/share`, {
-        method: "POST",
-        headers: { "X-CSRF-Token": csrfToken },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const url = `${location.origin}${data.share_url}`;
-        document.getElementById("share-link-input").value = url;
-        document.getElementById("share-link-row").classList.remove("hidden");
-        document.getElementById("share-link-row").classList.add("flex");
-        document.getElementById("share-btn").textContent = "Shared";
-        showToast("Share link created!", "success");
-      }
-    }
+  function closeModal(e) {
+    if (e && e.target !== e.currentTarget) return;
+    document.getElementById("modal").classList.add("hidden");
+    document.body.style.overflow = "";
+    currentImageId = null;
+  }
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
 
-    async function unshareImage() {
-      if (!currentImageId) return;
-      const res = await fetch(`/api/image/${currentImageId}/share`, {
-        method: "DELETE",
-        headers: { "X-CSRF-Token": csrfToken },
-      });
-      if (res.ok) {
-        document.getElementById("share-link-row").classList.add("hidden");
-        document.getElementById("share-link-row").classList.remove("flex");
-        document.getElementById("share-btn").textContent = "Share";
-        showToast("Share link removed", "info");
-      }
-    }
+  function copyPrompt() {
+    const text = document.getElementById("modal-prompt").textContent;
+    navigator.clipboard.writeText(text);
+    const btn = document.getElementById("copy-btn-text");
+    btn.textContent = "Copied!";
+    showToast("Prompt copied", "success");
+    setTimeout(() => btn.textContent = "Copy prompt", 2000);
+  }
 
-    function copyShareLink() {
-      const input = document.getElementById("share-link-input");
-      navigator.clipboard.writeText(input.value);
-      showToast("Share link copied!", "success");
+  async function toggleFav(id, btn) {
+    event.stopPropagation();
+    const res = await fetch(`/api/image/${id}/favorite`, { method: "POST", headers: { "X-CSRF-Token": csrfToken } });
+    if (res.ok) {
+      const data = await res.json();
+      btn.classList.toggle("cf-mini-btn-fav-on", data.is_favorite);
+      const svg = btn.querySelector("svg");
+      if (svg) svg.setAttribute("fill", data.is_favorite ? "currentColor" : "none");
+      showToast(data.is_favorite ? "Added to favorites" : "Removed from favorites", "info");
     }
+  }
 
-    // Delete
-    async function deleteImage(id, btn) {
-      if (!confirm("Delete this image?")) return;
-      const res = await fetch(`/image/${id}`, {
-        method: "DELETE",
-        headers: { "X-CSRF-Token": csrfToken },
-      });
-      if (res.ok) {
-        const card = document.getElementById(`card-${id}`);
-        card.style.transition = "opacity 0.3s, transform 0.3s";
-        card.style.opacity = "0";
-        card.style.transform = "scale(0.95)";
-        setTimeout(() => card.remove(), 300);
-        showToast("Image deleted", "info");
-      } else {
-        showToast("Failed to delete image", "error");
-      }
+  async function loadTags(imageId) {
+    const container = document.getElementById("modal-tags");
+    container.innerHTML = '<span class="cf-eyebrow" style="font-size: 0.6875rem;">Tags</span>';
+    const imageTags = {{ image_tags | tojson }};
+    const tags = imageTags[imageId] || [];
+    tags.forEach(t => {
+      const pill = document.createElement("span");
+      pill.className = "cf-badge cf-badge-mint";
+      pill.style.cssText = "cursor: default;";
+      pill.innerHTML = `${t} <span style="cursor:pointer; opacity:0.7; margin-left: 0.25rem;" onclick="removeTag('${imageId}', '${t}', this.parentNode)">×</span>`;
+      container.appendChild(pill);
+    });
+  }
+
+  async function addTag() {
+    const input = document.getElementById("tag-input");
+    const tag = input.value.trim().toLowerCase();
+    if (!tag || !currentImageId) return;
+    const formData = new FormData();
+    formData.append("tag", tag);
+    const res = await fetch(`/api/image/${currentImageId}/tags`, { method: "POST", headers: { "X-CSRF-Token": csrfToken }, body: formData });
+    if (res.ok) {
+      input.value = ""; loadTags(currentImageId);
+      showToast(`Tag "${tag}" added`, "success");
+    } else {
+      const data = await res.json();
+      showToast(data.error || "Failed to add tag", "error");
     }
-  </script>
+  }
 
-</body>
-</html>
+  async function removeTag(imageId, tag, pill) {
+    event.stopPropagation();
+    const res = await fetch(`/api/image/${imageId}/tags/${encodeURIComponent(tag)}`, { method: "DELETE", headers: { "X-CSRF-Token": csrfToken } });
+    if (res.ok) { pill.remove(); showToast(`Tag "${tag}" removed`, "info"); }
+  }
+
+  async function shareImage() {
+    if (!currentImageId) return;
+    const res = await fetch(`/api/image/${currentImageId}/share`, { method: "POST", headers: { "X-CSRF-Token": csrfToken } });
+    if (res.ok) {
+      const data = await res.json();
+      const url = `${location.origin}${data.share_url}`;
+      document.getElementById("share-link-input").value = url;
+      const row = document.getElementById("share-link-row");
+      row.classList.remove("hidden"); row.style.display = "flex";
+      document.getElementById("share-btn").textContent = "Shared";
+      showToast("Share link created!", "success");
+    }
+  }
+
+  async function unshareImage() {
+    if (!currentImageId) return;
+    const res = await fetch(`/api/image/${currentImageId}/share`, { method: "DELETE", headers: { "X-CSRF-Token": csrfToken } });
+    if (res.ok) {
+      const row = document.getElementById("share-link-row");
+      row.classList.add("hidden"); row.style.display = "none";
+      document.getElementById("share-btn").textContent = "Share";
+      showToast("Share link removed", "info");
+    }
+  }
+
+  function copyShareLink() {
+    const input = document.getElementById("share-link-input");
+    navigator.clipboard.writeText(input.value);
+    showToast("Share link copied!", "success");
+  }
+
+  async function deleteImage(id, btn) {
+    if (!confirm("Delete this image?")) return;
+    const res = await fetch(`/image/${id}`, { method: "DELETE", headers: { "X-CSRF-Token": csrfToken } });
+    if (res.ok) {
+      const card = document.getElementById(`card-${id}`);
+      card.style.transition = "opacity 0.3s, transform 0.3s";
+      card.style.opacity = "0";
+      card.style.transform = "scale(0.95)";
+      setTimeout(() => card.remove(), 300);
+      showToast("Image deleted", "info");
+    } else {
+      showToast("Failed to delete image", "error");
+    }
+  }
+</script>
+{% endblock %}

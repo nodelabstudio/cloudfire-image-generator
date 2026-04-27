@@ -1,171 +1,166 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="csrf-token" content="{{ csrf_token }}" />
-  <title>Dashboard - Cloudfire</title>
-  <link rel="icon" type="image/jpeg" href="/static/fire-logo.jpg" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { heading: ['Space Grotesk', 'system-ui', 'sans-serif'], body: ['DM Sans', 'system-ui', 'sans-serif'] },
-        }
-      }
-    }
-  </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Cloudfire Image Generation{% endblock %}
+
+{% block nav %}
+  <a href="/" class="cf-nav-link">Studio</a>
+  <a href="/gallery" class="cf-nav-link">Gallery</a>
+  <span class="cf-badge cf-badge-paper hidden md:inline-flex">{{ username }}</span>
+  <a href="/logout" class="cf-btn cf-btn-ghost cf-btn-sm">Sign out</a>
+{% endblock %}
+
+{% block content %}
+<div class="cf-rise" style="display:flex; flex-direction:column; gap: 0.5rem; margin-bottom: 2rem; max-width: 60ch;">
+  <span class="cf-eyebrow">Dashboard</span>
+  <h1 class="cf-h2">A quick look at your <span class="cf-italic-flair">numbers</span>.</h1>
+  <p class="cf-lead">Total output, today's generations, your favorite model, and rate-limit headroom — all in one perch.</p>
+</div>
+
+<!-- Stat cards -->
+<div class="cf-rise cf-rise-1" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
   <style>
-    body { font-family: 'DM Sans', system-ui, sans-serif; }
-    :root { --bg: #FFFDF7; --bg-card: #fff; --bg-muted: #F5F5F0; --fg: #1a1a1a; --fg-muted: #555; --fg-dim: #888; --fg-faint: #AAA; --border: #000; --shadow: #000; }
-    .dark { --bg: #1a1a1a; --bg-card: #2a2a2a; --bg-muted: #333; --fg: #f0f0f0; --fg-muted: #ccc; --fg-dim: #999; --fg-faint: #777; --border: #f0f0f0; --shadow: #000; }
-    .nb-card { border: 3px solid var(--border); box-shadow: 5px 5px 0 var(--shadow); }
-    .nb-badge { border: 2px solid #000; color: #1a1a1a; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-    #theme-toggle { cursor: pointer; transition: transform 0.3s ease; }
-    #theme-toggle:hover { transform: scale(1.15); }
+    @media (min-width: 720px) { .cf-stats-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 1.25rem !important; } }
+    .cf-stat {
+      padding: 1.5rem clamp(1rem, 2.5vw, 1.75rem);
+      border-radius: var(--r-lg);
+      position: relative;
+      overflow: hidden;
+      min-height: 8.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .cf-stat-num {
+      font-family: 'Fraunces', serif;
+      font-variation-settings: "opsz" 144, "SOFT" 80;
+      font-weight: 600;
+      font-size: clamp(2.25rem, 5vw, 3.25rem);
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      color: var(--ink-deep);
+    }
+    .cf-stat-num-sm {
+      font-family: 'Fraunces', serif;
+      font-variation-settings: "opsz" 144, "SOFT" 80;
+      font-weight: 600;
+      font-size: clamp(1.25rem, 2.4vw, 1.625rem);
+      line-height: 1.1;
+      letter-spacing: -0.015em;
+      color: var(--ink-deep);
+    }
+    .cf-stat-label {
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .cf-stat-blob {
+      position: absolute;
+      width: 110px; height: 110px;
+      border-radius: 50%;
+      bottom: -30px; right: -30px;
+      filter: blur(20px); opacity: 0.55;
+    }
   </style>
-  <script>
-    (function() {
-      const t = localStorage.getItem('theme');
-      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      }
-    })();
-  </script>
-</head>
-<body class="h-full bg-[var(--bg)] text-[var(--fg)]">
+</div>
 
-  <div class="min-h-full flex flex-col">
+<div class="cf-stats-grid cf-rise cf-rise-1" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.75rem;">
+  <div class="cf-stat" style="background: linear-gradient(155deg, var(--blush-soft), var(--rose-soft));">
+    <span class="cf-stat-blob" style="background: var(--coral);"></span>
+    <span class="cf-stat-label">Total images</span>
+    <span class="cf-stat-num">{{ total }}</span>
+  </div>
+  <div class="cf-stat" style="background: linear-gradient(155deg, var(--peach-soft), var(--blush-soft));">
+    <span class="cf-stat-blob" style="background: var(--peach);"></span>
+    <span class="cf-stat-label">Today</span>
+    <span class="cf-stat-num">{{ today_count }}</span>
+  </div>
+  <div class="cf-stat" style="background: linear-gradient(155deg, var(--mint-soft), var(--lilac-soft));">
+    <span class="cf-stat-blob" style="background: var(--mint-deep); opacity: 0.4;"></span>
+    <span class="cf-stat-label">Top model</span>
+    <span class="cf-stat-num-sm">{{ top_model }}</span>
+  </div>
+  <div class="cf-stat" style="background: linear-gradient(155deg, var(--lilac-soft), var(--blush-soft));">
+    <span class="cf-stat-blob" style="background: var(--lavender);"></span>
+    <span class="cf-stat-label">Rate limit</span>
+    <span class="cf-stat-num-sm">5 / 5 min</span>
+  </div>
+</div>
 
-    <!-- Header -->
-    <header class="px-4 sm:px-6 py-3 sm:py-4 bg-[var(--bg-card)]" style="border-bottom: 3px solid var(--border);">
-      <div class="max-w-5xl mx-auto flex items-center justify-between">
-        <div class="flex items-center gap-2 sm:gap-3">
-          <img src="/static/fire-logo.jpg" alt="Cloudfire" class="w-8 h-8 sm:w-10 sm:h-10 rounded-md" style="border: 2px solid var(--border);" />
-          <div>
-            <h1 class="font-heading text-xl sm:text-2xl font-bold tracking-tight">
-              <span class="text-[#FF6B35]">Cloud</span><span class="text-[#FFD166]">fire</span> Dashboard
-            </h1>
-            <p class="text-[10px] sm:text-xs text-[var(--fg-dim)] font-medium -mt-0.5">Usage stats</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 sm:gap-3">
-          <svg id="theme-toggle" onclick="toggleTheme()" class="w-5 h-5 text-[var(--fg-dim)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <g id="icon-sun" class="hidden"><circle cx="12" cy="12" r="5" stroke-width="2"/><path stroke-width="2" stroke-linecap="round" d="M12 1v2m0 18v2m11-11h-2M3 12H1m16.36-7.36l-1.41 1.41M7.05 16.95l-1.41 1.41m12.72 0l-1.41-1.41M7.05 7.05L5.64 5.64"/></g>
-            <g id="icon-moon"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></g>
-          </svg>
-          <a href="/" class="nb-badge px-2 sm:px-3 py-1 rounded-md bg-[#FF6B35] text-white text-[8px] sm:text-[10px]">Generator</a>
-          <a href="/gallery" class="nb-badge px-2 sm:px-3 py-1 rounded-md bg-[#BFFF00] text-[8px] sm:text-[10px]">Gallery</a>
-          <span class="nb-badge px-2 sm:px-3 py-1 rounded-md bg-[#FFD166] text-[8px] sm:text-[10px] hidden sm:inline-block">{{ username }}</span>
-          <a href="/logout" class="nb-badge px-2 sm:px-3 py-1 rounded-md bg-[#FFE0E0] text-[8px] sm:text-[10px]">Logout</a>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main -->
-    <main class="flex-1 px-4 sm:px-6 py-6 sm:py-8">
-      <div class="max-w-5xl mx-auto space-y-6">
-
-        <!-- Summary cards -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div class="nb-card bg-[#FF6B35] rounded-md p-4 text-center">
-            <p class="text-3xl sm:text-4xl font-bold text-white">{{ total }}</p>
-            <p class="text-xs font-bold text-white/80 mt-1">Total Images</p>
-          </div>
-          <div class="nb-card bg-[#FFD166] rounded-md p-4 text-center">
-            <p class="text-3xl sm:text-4xl font-bold text-[#1a1a1a]">{{ today_count }}</p>
-            <p class="text-xs font-bold text-[#1a1a1a]/70 mt-1">Today</p>
-          </div>
-          <div class="nb-card bg-[#BFFF00] rounded-md p-4 text-center">
-            <p class="text-sm sm:text-base font-bold text-[#1a1a1a] leading-tight">{{ top_model }}</p>
-            <p class="text-xs font-bold text-[#1a1a1a]/70 mt-1">Top Model</p>
-          </div>
-          <div class="nb-card bg-[#7DF9FF] rounded-md p-4 text-center">
-            <p class="text-lg sm:text-xl font-bold text-[#1a1a1a]">5/min</p>
-            <p class="text-xs font-bold text-[#1a1a1a]/70 mt-1">Rate Limit</p>
-          </div>
-        </div>
-
-        <!-- Daily chart -->
-        <div class="nb-card bg-[var(--bg-card)] rounded-md p-5">
-          <h2 class="font-heading text-sm font-bold uppercase tracking-wider bg-[#FFD166] text-[#1a1a1a] inline-block px-2 py-0.5 rounded-sm mb-4" style="border: 2px solid #000;">Last 14 Days</h2>
-          {% if daily_data %}
-          <div class="space-y-2">
-            {% for d in daily_data %}
-            <div class="flex items-center gap-3">
-              <span class="text-xs text-[var(--fg-dim)] w-20 shrink-0 font-medium">{{ d.day[5:] }}</span>
-              <div class="flex-1 h-7 bg-[var(--bg-muted)] rounded-sm overflow-hidden" style="border: 2px solid #000;">
-                <div class="h-full bg-[#FF6B35] flex items-center justify-end pr-2" style="width: {{ (d.count / max_daily * 100) | int }}%; min-width: 2rem;">
-                  <span class="text-xs font-bold text-white">{{ d.count }}</span>
-                </div>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="text-[var(--fg-faint)] text-sm">No data yet. Generate some images!</p>
-          {% endif %}
-        </div>
-
-        <!-- Model usage -->
-        <div class="nb-card bg-[var(--bg-card)] rounded-md p-5">
-          <h2 class="font-heading text-sm font-bold uppercase tracking-wider bg-[#FF6B35] text-white inline-block px-2 py-0.5 rounded-sm mb-4" style="border: 2px solid #000;">Model Usage</h2>
-          {% if model_data %}
-          <div class="space-y-2">
-            {% for m in model_data %}
-            <div class="flex items-center justify-between py-2" {% if not loop.last %}style="border-bottom: 1px solid var(--bg-muted);"{% endif %}>
-              <div class="flex items-center gap-2">
-                {% if m.provider == 'cloudflare' %}
-                <span class="nb-badge px-1.5 py-0 rounded-sm bg-[#FF6B35] text-white" style="font-size: 8px;">CF</span>
-                {% else %}
-                <span class="nb-badge px-1.5 py-0 rounded-sm bg-[#4285F4] text-white" style="font-size: 8px;">G</span>
-                {% endif %}
-                <span class="text-sm font-medium text-[var(--fg)]">{{ m.name }}</span>
-              </div>
-              <span class="nb-badge px-2 py-0.5 rounded-sm bg-[var(--bg-muted)]" style="border-color: #000;">{{ m.count }}</span>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="text-[var(--fg-faint)] text-sm">No data yet.</p>
-          {% endif %}
-        </div>
-
-      </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="px-4 sm:px-6 py-3 sm:py-4 bg-[var(--bg-card)]" style="border-top: 3px solid var(--border);">
-      <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-0 text-[10px] sm:text-xs text-[var(--fg-faint)] font-medium">
-        <span>Cloudfire Image Generator</span>
-        <div class="flex items-center gap-3">
-          <a href="mailto:cloudfire@beachlife.email" class="hover:text-[#FF6B35] transition-colors">Questions or suggestions? Contact Cloudfire Support</a>
-          <span class="text-[var(--fg-faint)]">&middot;</span>
-          <a href="https://github.com/nodelabstudio/gemini-n-cloudflare-imagegen-ai" target="_blank"
-            class="hover:text-[#FF6B35] transition-colors">GitHub</a>
-        </div>
-      </div>
-    </footer>
-
+<!-- Daily chart -->
+<div class="cf-card cf-rise cf-rise-2" style="margin-bottom: 1.5rem;">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; margin-bottom: 1.25rem;">
+    <span class="cf-eyebrow">Last 14 days</span>
+    {% if daily_data %}
+    <span class="cf-faint" style="font-size: var(--fs-xs);">Peak {{ max_daily }} / day</span>
+    {% endif %}
   </div>
 
-  <script>
-    function toggleTheme() {
-      const isDark = document.documentElement.classList.toggle('dark');
-      localStorage.setItem('theme', isDark ? 'dark' : 'light');
-      updateThemeIcon();
-    }
-    function updateThemeIcon() {
-      const isDark = document.documentElement.classList.contains('dark');
-      document.getElementById('icon-sun').classList.toggle('hidden', !isDark);
-      document.getElementById('icon-moon').classList.toggle('hidden', isDark);
-    }
-    updateThemeIcon();
-  </script>
+  {% if daily_data %}
+  <div style="display:flex; flex-direction:column; gap: 0.5rem;">
+    <style>
+      .cf-bar-row { display:flex; align-items:center; gap: 0.875rem; }
+      .cf-bar-label { width: 4.5rem; font-size: var(--fs-xs); color: var(--ink-mute); font-weight: 600; flex-shrink: 0; }
+      .cf-bar-track { flex: 1; height: 1.625rem; background: var(--cream-deep); border-radius: var(--r-pill); overflow: hidden; position: relative; }
+      .cf-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--coral), var(--rose));
+        border-radius: var(--r-pill);
+        display: flex; align-items: center; justify-content: flex-end;
+        padding-right: 0.625rem;
+        min-width: 2.25rem;
+        transition: width 0.6s var(--ease-out);
+      }
+      .cf-bar-num { font-size: 0.75rem; font-weight: 700; color: white; }
+    </style>
+    {% for d in daily_data %}
+    <div class="cf-bar-row">
+      <span class="cf-bar-label">{{ d.day[5:] }}</span>
+      <div class="cf-bar-track">
+        <div class="cf-bar-fill" style="width: {{ (d.count / max_daily * 100) | int }}%;">
+          <span class="cf-bar-num">{{ d.count }}</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="display:flex; flex-direction:column; align-items:center; gap: 1rem; padding: 2.5rem 1rem; text-align:center;">
+    <img src="/static/img/art-sleep.png" alt="" class="cf-mascot" style="width: 140px; height:auto;" />
+    <p class="cf-muted">No data yet — go make something.</p>
+  </div>
+  {% endif %}
+</div>
 
-</body>
-</html>
+<!-- Model usage -->
+<div class="cf-card cf-rise cf-rise-3">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; margin-bottom: 1.25rem;">
+    <span class="cf-eyebrow">Model usage</span>
+    {% if model_data %}
+    <span class="cf-faint" style="font-size: var(--fs-xs);">{{ model_data | length }} model{{ 's' if model_data | length != 1 }}</span>
+    {% endif %}
+  </div>
+
+  {% if model_data %}
+  <div style="display:flex; flex-direction:column; gap: 0.25rem;">
+    {% for m in model_data %}
+    <div style="display:flex; align-items:center; justify-content:space-between; padding: 0.875rem 0; {% if not loop.last %}border-bottom: 1px solid var(--line-soft);{% endif %}">
+      <div style="display:flex; align-items:center; gap: 0.625rem; min-width: 0;">
+        {% if m.provider == 'cloudflare' %}
+        <span class="cf-badge cf-badge-blush" style="padding: 0.2rem 0.55rem; font-size: 0.625rem;">CF</span>
+        {% else %}
+        <span class="cf-badge cf-badge-lilac" style="padding: 0.2rem 0.55rem; font-size: 0.625rem;">G</span>
+        {% endif %}
+        <span style="font-size: var(--fs-sm); font-weight: 500; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ m.name }}</span>
+      </div>
+      <span class="cf-badge cf-badge-paper">{{ m.count }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="cf-muted">No data yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
